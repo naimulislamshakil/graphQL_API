@@ -7,6 +7,7 @@ const {
 	GraphQLString,
 	GraphQLInt,
 	GraphQLList,
+	GraphQLNonNull,
 } = require('graphql');
 const { resolve } = require('path');
 const port = process.env.PORT || 5000;
@@ -37,6 +38,7 @@ const books = [
 	{ id: 4, name: 'React Interview Questene', authorId: 1 },
 ];
 
+// book type
 const BookType = new GraphQLObjectType({
 	name: 'BookType',
 	description: '',
@@ -50,6 +52,23 @@ const BookType = new GraphQLObjectType({
 			resolve: (book) => {
 				let w = author.find((a) => a.id === book.authorId);
 				return w.name;
+			},
+		},
+	}),
+});
+
+// AuthorType type
+const AuthorType = new GraphQLObjectType({
+	name: 'AuthorType',
+	description: '',
+	fields: () => ({
+		id: { type: GraphQLInt },
+		name: { type: GraphQLString },
+		books: {
+			type: new GraphQLList(BookType),
+			description: '',
+			resolve: (author) => {
+				return books.filter((b) => b.authorId === author.id);
 			},
 		},
 	}),
@@ -83,11 +102,52 @@ const RootQuaryType = new GraphQLObjectType({
 				return books;
 			},
 		},
+
+		// Authors list
+		authors: {
+			type: new GraphQLList(AuthorType),
+			description: 'This is Author type',
+			resolve: () => {
+				return author;
+			},
+		},
+	}),
+});
+
+/*
+Now we will have mutation operation like
+Add new book
+Update a book
+delete a book
+*/
+
+const MutationType = new GraphQLObjectType({
+	name: 'MutationType',
+	description: 'This is add a book mutation type',
+	fields: () => ({
+		addBook: {
+			type: BookType,
+			description: 'There you can add a book',
+			args: {
+				name: { type: new GraphQLNonNull(GraphQLString) },
+				authorId: { type: new GraphQLNonNull(GraphQLInt) },
+			},
+			resolve: (parent, args) => {
+				let newBook = {
+					id: books.length + 1,
+					name: args.name,
+					authorId: args.authorId,
+				};
+				books.push(newBook);
+				return newBook;
+			},
+		},
 	}),
 });
 
 const schema = new GraphQLSchema({
 	query: RootQuaryType,
+	mutation: MutationType,
 });
 
 app.use(
